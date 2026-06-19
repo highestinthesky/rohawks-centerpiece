@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RoHawks 3419 — Scroll Centerpiece Prototype</title>
+
+    <!-- RoHawks brand fonts: Montserrat (headings) + Open Sans (body) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&family=Open+Sans:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <style>
+      :root {
+        /*THIS IS WHERE ALL COLORS CAN BE TUNED*/
+        --bg: #070608;
+        --bg2: #120a1d; /* deep purple-tinted dark */
+        --ink: #ece9f3; /* near-white body text — stays readable */
+        --muted: #8b8597;
+        --accent: #8a14df; /* RoHawks purple — the brand accent */ 
+        --blue: #3a78d6;
+        --line: rgba(255, 255, 255, 0.08);
+        --mono: "SFMono-Regular", ui-monospace, Menlo, Consolas, monospace;
+        --display: "Montserrat", "Open Sans", system-ui, sans-serif; /* headings */
+        --sans:
+          "Open Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          Helvetica, Arial, sans-serif; /* body */
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      html {
+        scroll-behavior: auto;
+      }
+
+      body {
+        background: var(--bg);
+        color: var(--ink);
+        font-family: var(--sans);
+        -webkit-font-smoothing: antialiased;
+        overflow-x: hidden;
+      }
+
+      /* ---------- Loader ---------- */
+
+      #loader {
+        position: fixed;
+        inset: 0;
+        z-index: 1000;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 18px;
+        background: var(--bg);
+        transition: opacity 0.6s ease;
+      }
+
+      #loader.hide {
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      .ldr-mark {
+        color: var(--muted);
+        font-family: var(--mono);
+        font-size: 12px;
+        letter-spacing: 0.4em;
+      }
+
+      .ldr-bar {
+        width: 220px;
+        height: 4px;
+        overflow: hidden;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 2px;
+      }
+
+      .ldr-fill {
+        width: 0;
+        height: 100%;
+        background: var(--accent);
+        transition: width 0.15s linear;
+      }
+
+      .ldr-pct {
+        color: var(--muted);
+        font-family: var(--mono);
+        font-size: 11px;
+      }
+
+      /* ---------- Navigation ---------- */
+
+      nav {
+        position: fixed;
+        top: 0;
+        right: 0;
+        left: 0;
+        z-index: 200;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 18px 34px;
+        mix-blend-mode: difference;
+      }
+
+      .brand {
+        font-family: var(--display);
+        font-size: 15px;
+        font-weight: 800;
+        letter-spacing: 0.16em;
+      }
+
+      .brand b {
+        color: var(--accent);
+        mix-blend-mode: normal;
+      }
+
+      .navlinks {
+        display: flex;
+        gap: 26px;
+        color: #fff;
+        font-family: var(--mono);
+        font-size: 12px;
+        letter-spacing: 0.1em;
+      }
+
+      .navlinks span {
+        opacity: 0.75;
+      }
+
+      @media (max-width: 640px) {
+        .navlinks {
+          display: none;
+        }
+      }
+
+      /* ---------- Hero ---------- */
+
+      .hero {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        padding: 0 22px;
+        text-align: center;
+      }
+
+      .hero .eyebrow {
+        margin-bottom: 26px;
+        color: var(--accent);
+        font-family: var(--mono);
+        font-size: 18px;
+        letter-spacing: 0.5em;
+        opacity: 0;
+      }
+
+      .hero h1 {
+        font-family: var(--display);
+        font-size: clamp(44px, 9vw, 128px);
+        font-weight: 800;
+        line-height: 0.95;
+        letter-spacing: -0.03em;
+      }
+
+      .hero h1 .l {
+        display: inline-block;
+        opacity: 0;
+        transform: translateY(40px);
+      }
+
+      .hero .sub {
+        max-width: 540px;
+        margin-top: 26px;
+        color: var(--muted);
+        font-size: clamp(15px, 2vw, 18px);
+        line-height: 1.6;
+        opacity: 0;
+      }
+
+      .scrollcue {
+        position: absolute;
+        bottom: 34px;
+        left: 50%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+        color: var(--muted);
+        font-family: var(--mono);
+        font-size: 11px;
+        letter-spacing: 0.3em;
+        opacity: 0;
+        transform: translateX(-50%);
+      }
+
+      .scrollcue .ln {
+        width: 1px;
+        height: 34px;
+        background: linear-gradient(var(--muted), transparent);
+        animation: cue 1.8s ease-in-out infinite;
+      }
+
+      @keyframes cue {
+        0% {
+          transform: scaleY(0.2);
+          transform-origin: top;
+        }
+
+        50% {
+          transform: scaleY(1);
+          transform-origin: top;
+        }
+
+        100% {
+          transform: scaleY(0.2);
+          transform-origin: top;
+        }
+      }
+
+      /* ---------- Pinned scrub stage ---------- */
+
+      .stage {
+        position: relative;
+        height: 460vh;
+        background:
+          radial-gradient(
+            120% 80% at 50% 20%,
+            rgba(138, 20, 223, 0.13),
+            transparent 60%
+          ),
+          linear-gradient(var(--bg), var(--bg2));
+      }
+
+      .sticky {
+        position: sticky;
+        top: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        overflow: hidden;
+      }
+
+      #scene {
+        display: block;
+        width: min(86vmin, 820px);
+        height: min(86vmin, 820px);
+        filter: drop-shadow(0 40px 60px rgba(0, 0, 0, 0.55));
+      }
+
+      /* Spinning tech rings behind the robot */
+
+      .ring {
+        position: absolute;
+        width: min(70vmin, 620px);
+        height: min(70vmin, 620px);
+        border: 1px dashed rgba(138, 20, 223, 0.3);
+        border-radius: 50%;
+        pointer-events: none;
+      }
+
+      .ring.r2 {
+        width: min(54vmin, 470px);
+        height: min(54vmin, 470px);
+        border-color: rgba(176, 120, 235, 0.2);
+        border-style: solid;
+      }
+
+      /* Stage captions */
+
+      .caps {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+      }
+
+      .cap {
+        position: absolute;
+        max-width: 300px;
+        opacity: 0;
+        transition: none;
+        transform: translateY(20px);
+      }
+
+      .cap .num {
+        color: var(--accent);
+        font-family: var(--mono);
+        font-size: 12px;
+        letter-spacing: 0.3em;
+      }
+
+      .cap h3 {
+        font-family: var(--display);
+        margin: 8px 0 10px;
+        font-size: clamp(22px, 3vw, 34px);
+        font-weight: 700;
+        letter-spacing: -0.01em;
+      }
+
+      .cap p {
+        color: var(--muted);
+        font-size: 15px;
+        line-height: 1.6;
+      }
+
+      .cap.left {
+        top: 34%;
+        left: 6vw;
+      }
+
+      .cap.right {
+        top: 46%;
+        right: 6vw;
+        text-align: right;
+      }
+
+      @media (max-width: 760px) {
+        .caps {
+          display: flex;
+          align-items: flex-end;
+          justify-content: center;
+        }
+
+        .cap {
+          position: absolute;
+          right: 0;
+          bottom: 9vh;
+          left: 0;
+          max-width: none;
+          margin: 0 auto;
+          padding: 0 24px;
+          text-align: center !important;
+        }
+      }
+
+      /* Progress rail */
+
+      .rail {
+        position: absolute;
+        top: 50%;
+        right: 30px;
+        z-index: 50;
+        width: 2px;
+        height: 200px;
+        background: rgba(255, 255, 255, 0.08);
+        transform: translateY(-50%);
+      }
+
+      .rail .fill {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 0;
+        background: var(--accent);
+      }
+
+      .rail .lbl {
+        position: absolute;
+        top: 0;
+        left: 14px;
+        color: var(--muted);
+        font-family: var(--mono);
+        font-size: 10px;
+        transform: translateY(-50%);
+      }
+
+      @media (max-width: 760px) {
+        .rail {
+          display: none;
+        }
+      }
+
+      /* ---------- Stats ---------- */
+
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 30px;
+        padding: 14vh 8vw;
+        background: var(--bg2);
+        border-top: 1px solid var(--line);
+      }
+
+      .stat .n {
+        font-family: var(--display);
+        color: #fff;
+        font-size: clamp(40px, 6vw, 72px);
+        font-weight: 800;
+        letter-spacing: -0.03em;
+      }
+
+      .stat .n b {
+        color: var(--accent);
+      }
+
+      .stat .k {
+        margin-top: 6px;
+        color: var(--muted);
+        font-family: var(--mono);
+        font-size: 12px;
+        letter-spacing: 0.2em;
+      }
+
+      /* ---------- Closing section ---------- */
+
+      .cta {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 70vh;
+        gap: 24px;
+        padding: 0 22px;
+        background:
+          radial-gradient(
+            80% 60% at 50% 0%,
+            rgba(138, 20, 223, 0.13),
+            transparent 60%
+          ),
+          var(--bg2);
+        text-align: center;
+      }
+
+      .cta h2 {
+        font-family: var(--display);
+        font-size: clamp(32px, 6vw, 72px);
+        font-weight: 800;
+        line-height: 1;
+        letter-spacing: -0.03em;
+      }
+
+      .btn {
+        padding: 15px 30px;
+        color: #fff;
+        background: transparent;
+        border: 1px solid var(--accent);
+        border-radius: 2px;
+        font-family: var(--mono);
+        font-size: 13px;
+        letter-spacing: 0.15em;
+        cursor: pointer;
+        transition: background 0.2s ease;
+      }
+
+      .btn:hover {
+        background: var(--accent);
+      }
+
+      footer {
+        padding: 40px;
+        color: var(--muted);
+        border-top: 1px solid var(--line);
+        font-family: var(--mono);
+        font-size: 11px;
+        letter-spacing: 0.15em;
+        text-align: center;
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- Loader -->
+    <div id="loader">
+      <div class="ldr-mark">TEAM&nbsp;3419&nbsp;//&nbsp;ROHAWKS</div>
+
+      <div class="ldr-bar">
+        <div class="ldr-fill" id="ldrFill"></div>
+      </div>
+
+      <div class="ldr-pct" id="ldrPct">0%</div>
+    </div>
+
+    <!-- Navigation -->
+    <nav>
+      <div class="brand"><b>//</b> ROHAWKS 3419</div>
+
+      <div class="navlinks">
+        <span>PLACEHOLDER</span>
+        <span>PLACEHOLDER</span>
+        <span>PLACEHOLDER</span>
+        <span>PLACEHOLDER</span>
+      </div>
+    </nav>
+
+    <!-- Hero -->
+    <section class="hero">
+      <div class="eyebrow" id="eyebrow">
+        FRC&nbsp;·&nbsp;HUNTER COLLEGE HIGH SCHOOL
+      </div>
+
+      <h1 id="heroTitle"><span class="l">P</span><span class="l">L</span><span class="l">A</span><span class="l">C</span><span class="l">E</span><span class="l">H</span><span class="l">O</span><span class="l">L</span><span class="l">D</span><span class="l">E</span><span class="l">R</span></h1>
+
+      <p class="sub" id="heroSub">
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit, 
+        sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. 
+      </p>
+
+      <div class="scrollcue" id="scrollcue">
+        SCROLL
+        <div class="ln"></div>
+      </div>
+    </section>
+
+    <!-- Pinned scroll stage -->
+    <section class="stage" id="stage">
+      <div class="sticky">
+        <div class="ring"></div>
+        <div class="ring r2"></div>
+        <canvas id="scene"></canvas>
+
+        <div class="caps">
+          <div class="cap left" data-at="0.18">
+            <div class="num">01 / PLACEHOLDER</div>
+            <h3>Lorem Ipsum</h3>
+            <p>
+              Lorem ipsum dolor sit amet, consectetur adipiscing elit, 
+              sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+            </p>
+          </div>
+
+          <div class="cap right" data-at="0.45">
+            <div class="num">02 / PLACEHOLDER</div>
+            <h3>Lorem Ipsum</h3>
+            <p>
+              Lorem ipsum dolor sit amet, consectetur adipiscing elit, 
+              sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+            </p>
+          </div>
+
+          <div class="cap left" data-at="0.72">
+            <div class="num">03 / PLACEHOLDER</div>
+            <h3>Lorem Ipsum</h3>
+            <p>
+              Lorem ipsum dolor sit amet, consectetur adipiscing elit, 
+              sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+            </p>
+          </div>
+
+          <div class="cap right" data-at="0.92">
+            <div class="num">04 / PLACEHOLDER</div>
+            <h3>Lorem Ipsum</h3>
+            <p>
+              Lorem ipsum dolor sit amet, consectetur adipiscing elit, 
+              sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+            </p>
+          </div>
+        </div>
+
+        <div class="rail">
+          <div class="fill" id="railFill"></div>
+          <div class="lbl" id="railLbl">000°</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Stats -->
+    <section class="stats" id="stats">
+      <div class="stat">
+        <div class="n" data-to="3419">0</div>
+        <div class="k">TEAM&nbsp;NUMBER</div>
+      </div>
+
+      <div class="stat">
+        <div class="n" data-to="67" data-suf="+">0</div>
+        <div class="k">SEASONS&nbsp;COMPETED</div>
+      </div>
+
+      <div class="stat">
+        <div class="n" data-to="67" data-suf="&nbsp;Weeks">0</div>
+        <div class="k">BUILD&nbsp;SEASON</div>
+      </div>
+
+      <div class="stat">
+        <div class="n" data-to="6767" data-suf="+">0</div>
+        <div class="k">PARTS&nbsp;MACHINED</div>
+      </div>
+    </section>
+
+    <!-- Call to action -->
+    <section class="cta">
+      <h2>Lorem Ipsum?</h2>
+      <button class="btn">Lorem Ipsum. →</button>
+    </section>
+
+    <footer>PROTOTYPE · BASEPLATE PREVIEW · TEAM 3419 ROHAWKS</footer>
+
+    <!-- anime.js handles text reveals and count-up animations -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.2/anime.min.js"></script>
+
+    <script>
+      /* ============================================================
+         1) FRAME SEQUENCE (the centerpiece)
+         Replace ./frames/frame_###.png with your real CAD render.
+         ============================================================ */
+
+      const FRAME_COUNT = 120;
+
+      const framePath = (index) =>
+        `./frames/frame_${String(index).padStart(3, "0")}.png`;
+
+      const images = [];
+      let loaded = 0;
+
+      const canvas = document.getElementById("scene");
+      const ctx = canvas.getContext("2d");
+
+      function sizeCanvas() {
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const css = canvas.getBoundingClientRect();
+
+        canvas.width = Math.round(css.width * dpr);
+        canvas.height = Math.round(css.height * dpr);
+
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
+
+      let curFrame = 0;
+
+      function drawFrame(index) {
+        const img = images[index];
+
+        if (!img || !img.complete) {
+          return;
+        }
+
+        const width = canvas.clientWidth;
+        const height = canvas.clientHeight;
+
+        ctx.clearRect(0, 0, width, height);
+
+        // Scale the image to fit inside the canvas without cropping it.
+        const scale = Math.min(width / img.width, height / img.height);
+        const drawWidth = img.width * scale;
+        const drawHeight = img.height * scale;
+
+        ctx.drawImage(
+          img,
+          (width - drawWidth) / 2,
+          (height - drawHeight) / 2,
+          drawWidth,
+          drawHeight,
+        );
+      }
+
+      /* Preload frames and update the loader's progress bar. */
+
+      const fill = document.getElementById("ldrFill");
+      const pct = document.getElementById("ldrPct");
+
+      for (let index = 0; index < FRAME_COUNT; index++) {
+        const img = new Image();
+
+        img.onload = img.onerror = () => {
+          loaded++;
+
+          const progress = Math.round((loaded / FRAME_COUNT) * 100);
+
+          fill.style.width = `${progress}%`;
+          pct.textContent = `${progress}%`;
+
+          if (loaded === FRAME_COUNT) {
+            start();
+          }
+        };
+
+        img.src = framePath(index);
+        images[index] = img;
+      }
+
+      /* ============================================================
+         2) SCROLL-TO-FRAME MAPPING
+         Maps progress through the pinned stage to the image sequence.
+         ============================================================ */
+
+      const stage = document.getElementById("stage");
+      const railFill = document.getElementById("railFill");
+      const railLbl = document.getElementById("railLbl");
+      const caps = [...document.querySelectorAll(".cap")];
+
+      function onScroll() {
+        const rect = stage.getBoundingClientRect();
+        const total = stage.offsetHeight - window.innerHeight;
+        const scrolled = Math.min(Math.max(-rect.top, 0), total);
+        const progress = total > 0 ? scrolled / total : 0;
+
+        const frame = Math.min(
+          FRAME_COUNT - 1,
+          Math.floor(progress * FRAME_COUNT),
+        );
+
+        if (frame !== curFrame) {
+          curFrame = frame;
+          drawFrame(frame);
+        }
+
+        railFill.style.height = `${progress * 100}%`;
+        railLbl.style.top = `${progress * 100}%`;
+        railLbl.textContent =
+          `${String(Math.round(progress * 360)).padStart(3, "0")}°`;
+
+        // Reveal each caption when the scroll passes its threshold.
+        caps.forEach((caption) => {
+          const threshold = parseFloat(caption.dataset.at);
+          const withinRange =
+            progress >= threshold - 0.06 && progress <= threshold + 0.18;
+
+          if (withinRange && !caption._shown) {
+            caption._shown = true;
+
+            anime({
+              targets: caption,
+              opacity: [0, 1],
+              translateY: [20, 0],
+              duration: 600,
+              easing: "easeOutCubic",
+            });
+          } else if (!withinRange && caption._shown) {
+            caption._shown = false;
+
+            anime({
+              targets: caption,
+              opacity: [1, 0],
+              translateY: [0, -12],
+              duration: 400,
+              easing: "easeInCubic",
+            });
+          }
+        });
+      }
+
+      /* ============================================================
+         3) HERO AND STATS ANIMATIONS
+         ============================================================ */
+
+      function heroIntro() {
+        anime
+          .timeline({ easing: "easeOutExpo" })
+          .add({
+            targets: "#eyebrow",
+            opacity: [0, 1],
+            translateY: [14, 0],
+            duration: 700,
+          })
+          .add(
+            {
+              targets: "#heroTitle .l",
+              opacity: [0, 1],
+              translateY: [40, 0],
+              delay: anime.stagger(40),
+              duration: 800,
+            },
+            "-=400",
+          )
+          .add(
+            {
+              targets: "#heroSub",
+              opacity: [0, 1],
+              translateY: [14, 0],
+              duration: 700,
+            },
+            "-=400",
+          )
+          .add(
+            {
+              targets: "#scrollcue",
+              opacity: [0, 1],
+              duration: 700,
+            },
+            "-=300",
+          );
+      }
+
+      let statsDone = false;
+
+      function runStats() {
+        if (statsDone) {
+          return;
+        }
+
+        statsDone = true;
+
+        document.querySelectorAll(".stat .n").forEach((element) => {
+          const targetNumber = Number(element.dataset.to);
+          const suffix = element.dataset.suf || "";
+
+          anime({
+            targets: { value: 0 },
+            value: targetNumber,
+            round: 1,
+            duration: 1600,
+            easing: "easeOutExpo",
+            update: (animation) => {
+              const currentValue = animation.animations[0].currentValue;
+              element.textContent = `${Math.round(currentValue)}${suffix}`;
+            },
+          });
+        });
+      }
+
+      const statsObserver = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              runStats();
+            }
+          });
+        },
+        { threshold: 0.4 },
+      );
+
+      statsObserver.observe(document.getElementById("stats"));
+
+      /* ============================================================
+         4) PAGE STARTUP
+         ============================================================ */
+
+      function start() {
+        document.getElementById("loader").classList.add("hide");
+
+        sizeCanvas();
+        drawFrame(0);
+        heroIntro();
+
+        window.addEventListener("scroll", onScroll, { passive: true });
+        onScroll();
+      }
+
+      window.addEventListener("resize", () => {
+        sizeCanvas();
+        drawFrame(curFrame);
+      });
+    </script>
+  </body>
+</html>
