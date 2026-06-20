@@ -1,0 +1,671 @@
+/* ============================================================
+   RoHawks 3419 — print / drafting art direction
+   Deliberately NOT the dark-glow SaaS look:
+   warm drafting paper, engineering grid, ink + purple spot,
+   real grain, crop marks, mono annotations.
+   ============================================================ */
+
+:root {
+  /* --- surfaces --- */
+  --desk: #e7e0ec; /* drafting-desk surface, faint purple */
+  --paper: #f8f5fa; /* sheet paper, warm white w/ purple cast */
+  --paper-edge: #e6deec;
+  --blueprint: #143a72; /* cyanotype finale (last page stays blue) */
+  --blueprint-deep: #0e2a55;
+
+  /* --- ink --- */
+  --ink: #211a26; /* near-black with a violet cast */
+  --ink-soft: #5b5163;
+  --ink-faint: #8e8497;
+  --rule: #ddd2e6; /* hairline rules */
+  --grid: rgba(72, 30, 96, 0.06); /* engineering grid, purple */
+
+  /* --- RoHawks purple: the dominant brand color --- */
+  --accent: #7d1ec9;
+  --accent-ink: #5c1497;
+  --accent-2: #a85fe6;
+
+  /* --- type --- */
+  --display: "Montserrat", system-ui, -apple-system, sans-serif;
+  --body: "Open Sans", system-ui, -apple-system, sans-serif;
+  --mono: "Space Mono", ui-monospace, Menlo, Consolas, monospace;
+
+  /* --- sheet geometry (shared by JS expand math) --- */
+  --sheet-w: clamp(660px, 135vmin, 1980px);
+  --sheet-h: clamp(870px, 141vh, 2250px);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: auto;
+}
+
+body {
+  min-height: 100%;
+  background-color: var(--desk);
+  /* faint engineering graph paper */
+  background-image:
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 26px 26px;
+  color: var(--ink);
+  font-family: var(--body);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* paper grain over everything (no pointer capture) */
+.grain {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  pointer-events: none;
+  opacity: 0.05;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ------------------------------------------------------------
+   Nav — small, editorial, inverts over any surface
+   ------------------------------------------------------------ */
+.nav {
+  position: fixed;
+  inset: 0 0 auto 0;
+  z-index: 500;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 20px 28px;
+  color: #fff;
+  mix-blend-mode: difference; /* legible over paper AND blueprint */
+}
+
+.nav__mark {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 15px;
+  letter-spacing: 0.14em;
+}
+.nav__mark b {
+  color: var(--accent-2);
+}
+
+.nav__links {
+  display: flex;
+  gap: 22px;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.nav__links span {
+  opacity: 0.8;
+}
+@media (max-width: 620px) {
+  .nav__links {
+    display: none;
+  }
+}
+
+/* ------------------------------------------------------------
+   Hero — asymmetric editorial composition, crop marks
+   ------------------------------------------------------------ */
+.hero {
+  position: relative;
+  min-height: 100vh;
+  padding: clamp(90px, 14vh, 160px) clamp(24px, 7vw, 110px) 90px;
+  display: grid;
+  align-content: center;
+  overflow: hidden;
+}
+
+/* registration / crop marks in the corners (print signal) */
+.crop {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  border: 0 solid var(--ink-faint);
+  opacity: 0.7;
+}
+.crop.tl {
+  top: 26px;
+  left: 26px;
+  border-top-width: 1.5px;
+  border-left-width: 1.5px;
+}
+.crop.tr {
+  top: 26px;
+  right: 26px;
+  border-top-width: 1.5px;
+  border-right-width: 1.5px;
+}
+.crop.bl {
+  bottom: 26px;
+  left: 26px;
+  border-bottom-width: 1.5px;
+  border-left-width: 1.5px;
+}
+.crop.br {
+  bottom: 26px;
+  right: 26px;
+  border-bottom-width: 1.5px;
+  border-right-width: 1.5px;
+}
+
+.hero__eyebrow {
+  font-family: var(--mono);
+  font-size: clamp(11px, 1.1vw, 13px);
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin-bottom: clamp(14px, 2vh, 26px);
+  opacity: 0; /* animated in */
+}
+.hero__eyebrow .tick {
+  color: var(--accent);
+}
+
+/* "something flew over" — a soft shadow band sweeps across and dims the page */
+.flyover {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 250vw; /* wider than the viewport so the dark band can travel across */
+  height: 100vh;
+  z-index: 600; /* above everything, briefly */
+  pointer-events: none;
+  opacity: 0;
+  transform: translateX(-100vw);
+  background: linear-gradient(
+    100deg,
+    transparent 0%,
+    rgba(6, 4, 10, 0.62) 50%,
+    transparent 100%
+  );
+  will-change: transform, opacity;
+}
+
+/* hawk silhouette image that soars across */
+.hawk-wrap {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 65;
+  width: clamp(420px, 70vw, 1200px);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+.hawk {
+  display: block;
+  width: 100%;
+  height: auto;
+  opacity: 0; /* animated by src/hero.js */
+  mix-blend-mode: multiply; /* black stays; white background keys out over the page */
+  will-change: transform, opacity;
+}
+
+/* the logo lockup the hawk drops in */
+.lockup {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: clamp(10px, 1.6vw, 22px);
+  opacity: 0; /* dropped in by src/hero.js */
+  will-change: transform, opacity;
+}
+.lockup__emblem {
+  width: clamp(64px, 8vw, 124px);
+  height: auto;
+  display: block;
+}
+.hero__title {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: clamp(58px, 13vw, 200px);
+  line-height: 0.86;
+  letter-spacing: -0.04em;
+  color: var(--accent-ink);
+  margin: 0;
+}
+
+/* rough hand-inked underline under the title */
+.hero__rule {
+  height: 10px;
+  width: clamp(180px, 34vw, 460px);
+  margin-top: 14px;
+  color: var(--accent);
+  opacity: 0;
+}
+.hero__rule svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.hero__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  margin-top: clamp(22px, 4vh, 46px);
+}
+.hero__sub {
+  max-width: 44ch;
+  color: var(--ink-soft);
+  font-size: clamp(14px, 1.5vw, 18px);
+  line-height: 1.65;
+  opacity: 0;
+}
+.hero__tag {
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  color: var(--ink-faint);
+  text-align: right;
+  line-height: 1.7;
+  opacity: 0;
+}
+.hero__tag b {
+  display: block;
+  font-size: clamp(26px, 4vw, 46px);
+  color: var(--accent-ink);
+  letter-spacing: 0.04em;
+}
+
+.scrollcue {
+  position: absolute;
+  left: clamp(24px, 7vw, 110px);
+  bottom: 30px;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  opacity: 0;
+}
+.scrollcue .bar {
+  width: 46px;
+  height: 1.5px;
+  background: var(--ink);
+  transform-origin: left;
+  animation: cue 1.9s ease-in-out infinite;
+}
+@keyframes cue {
+  0%,
+  100% {
+    transform: scaleX(0.25);
+  }
+  50% {
+    transform: scaleX(1);
+  }
+}
+
+/* ------------------------------------------------------------
+   The Deck — pinned stack of physical paper sheets
+   ------------------------------------------------------------ */
+.deck {
+  position: relative;
+  height: 1100vh; /* taller = lower scroll sensitivity; each beat gets more room */
+}
+.deck__sticky {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow: hidden;
+  perspective: 1600px;
+}
+
+.stack {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+}
+
+/* page counter, drafting style */
+.counter {
+  position: absolute;
+  right: 28px;
+  bottom: 26px;
+  z-index: 50;
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.2em;
+  color: var(--ink-soft);
+  mix-blend-mode: difference;
+  color: #fff;
+}
+
+.sheet {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%); /* JS appends pile/peel transforms */
+  width: var(--sheet-w);
+  height: var(--sheet-h);
+  background: var(--paper);
+  color: var(--ink);
+  border: 1px solid var(--paper-edge);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.6) inset,
+    0 30px 50px -24px rgba(20, 18, 14, 0.5),
+    0 8px 18px -12px rgba(20, 18, 14, 0.35);
+  padding: clamp(40px, 5vh, 84px) clamp(48px, 7vmin, 130px);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start; /* content flows from the top; sheet is anchored near the top */
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+}
+
+/* content block — flows from the top of the (top-anchored) page */
+.sheet__inner {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(16px, 2.4vh, 34px);
+}
+
+/* a strip of "tape" at the top edge */
+.sheet::before {
+  content: "";
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  width: 92px;
+  height: 24px;
+  transform: translateX(-50%) rotate(-1.5deg);
+  background: rgba(178, 95, 224, 0.16);
+  border: 1px solid rgba(122, 26, 168, 0.18);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+}
+
+/* notebook margin line + faint rules */
+/* notebook rule lines removed — they didn't line up with the text */
+.sheet--ruled {
+}
+
+.sheet__head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  border-bottom: 2px solid var(--accent);
+  padding-bottom: clamp(10px, 1.4vh, 22px);
+}
+.sheet__no {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: clamp(54px, 10vh, 130px);
+  line-height: 0.85;
+  color: var(--accent);
+  letter-spacing: -0.03em;
+}
+.sheet__label {
+  text-align: right;
+}
+.sheet__kicker {
+  font-family: var(--mono);
+  font-size: clamp(11px, 1.4vh, 18px);
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.sheet__title {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: clamp(24px, 3.6vh, 54px);
+  letter-spacing: -0.01em;
+  margin-top: 4px;
+}
+
+.sheet__body {
+  font-size: clamp(15px, 2vh, 30px);
+  line-height: 1.6;
+  color: var(--ink-soft);
+}
+.sheet__body p + p {
+  margin-top: clamp(8px, 1.2vh, 18px);
+}
+
+/* photo placeholder slots */
+.photo {
+  position: relative;
+  background:
+    repeating-linear-gradient(
+      45deg,
+      #ece6f1,
+      #ece6f1 9px,
+      #e3daec 9px,
+      #e3daec 18px
+    );
+  border: 1px solid var(--paper-edge);
+  display: grid;
+  place-items: center;
+}
+.photo::after {
+  content: "PHOTO";
+  font-family: var(--mono);
+  font-size: clamp(10px, 1.2vh, 16px);
+  letter-spacing: 0.22em;
+  color: var(--ink-faint);
+}
+.photo--hero {
+  height: clamp(160px, 32vh, 480px);
+}
+.photo-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: clamp(8px, 1vw, 16px);
+  height: clamp(120px, 20vh, 300px);
+}
+.fig {
+  font-family: var(--mono);
+  font-size: clamp(10px, 1.2vh, 15px);
+  letter-spacing: 0.18em;
+  color: var(--ink-faint);
+}
+
+/* sponsor/logo grid */
+.logo-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: clamp(8px, 1vw, 18px);
+}
+.logo-grid div {
+  height: clamp(56px, 9vh, 130px);
+  border: 1px dashed var(--ink-faint);
+  display: grid;
+  place-items: center;
+  font-family: var(--mono);
+  font-size: clamp(10px, 1.2vh, 16px);
+  letter-spacing: 0.16em;
+  color: var(--ink-faint);
+  opacity: 0.8;
+}
+
+/* timeline list */
+.timeline {
+  list-style: none;
+}
+.timeline li {
+  position: relative;
+  padding: clamp(8px, 1.3vh, 18px) 0 clamp(8px, 1.3vh, 18px)
+    clamp(24px, 2.6vw, 46px);
+  border-bottom: 1px solid var(--rule);
+  font-size: clamp(15px, 2vh, 30px);
+}
+.timeline li::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: clamp(14px, 2vh, 28px);
+  width: clamp(9px, 1.1vh, 16px);
+  height: clamp(9px, 1.1vh, 16px);
+  background: var(--accent);
+  border-radius: 50%;
+}
+.timeline b {
+  font-family: var(--mono);
+  color: var(--ink);
+  margin-right: clamp(8px, 1vw, 18px);
+}
+
+.sheet__foot {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--mono);
+  font-size: clamp(10px, 1.2vh, 15px);
+  letter-spacing: 0.16em;
+  color: var(--ink-faint);
+  text-transform: uppercase;
+  border-top: 1px solid var(--rule);
+  padding-top: clamp(8px, 1.2vh, 16px);
+}
+
+/* ------------------------------------------------------------
+   Blueprint finale sheet
+   ------------------------------------------------------------ */
+.sheet--blueprint {
+  background: var(--blueprint);
+  border-color: var(--blueprint-deep);
+  color: #eaf1ff;
+  /* blueprint grid */
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.16) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.16) 1px, transparent 1px),
+    linear-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.07) 1px, transparent 1px);
+  background-size:
+    120px 120px,
+    120px 120px,
+    24px 24px,
+    24px 24px;
+  padding: 0;
+  overflow: hidden;
+}
+.sheet--blueprint::before {
+  display: none; /* no tape on the blueprint */
+}
+.bp__frame {
+  position: absolute;
+  inset: 14px;
+  border: 1.5px solid rgba(255, 255, 255, 0.55);
+  pointer-events: none;
+}
+.bp__title {
+  position: absolute;
+  left: 24px;
+  top: 62px; /* clear of the fixed nav wordmark */
+  font-family: var(--display);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  font-size: clamp(16px, 2vw, 22px);
+  color: #fff;
+}
+.bp__title .sub {
+  display: block;
+  font-family: var(--mono);
+  font-weight: 400;
+  font-size: 10px;
+  letter-spacing: 0.24em;
+  color: rgba(234, 241, 255, 0.7);
+  margin-top: 4px;
+}
+/* drafting title block, lower-right */
+.bp__block {
+  position: absolute;
+  right: 18px;
+  bottom: 18px;
+  width: min(280px, 52%);
+  border: 1.5px solid rgba(255, 255, 255, 0.55);
+  font-family: var(--mono);
+  font-size: 10px;
+  color: rgba(234, 241, 255, 0.92);
+}
+.bp__block .row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+.bp__block .cell {
+  padding: 6px 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.35);
+  border-right: 1px solid rgba(255, 255, 255, 0.35);
+  letter-spacing: 0.12em;
+}
+.bp__block .cell:last-child {
+  border-right: 0;
+}
+.bp__block .k {
+  color: rgba(234, 241, 255, 0.55);
+  font-size: 8.5px;
+}
+/* dimension annotation */
+.bp__dim {
+  position: absolute;
+  left: 22px;
+  bottom: 22px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  color: rgba(234, 241, 255, 0.75);
+}
+
+/* CAD canvas lives centered in the blueprint, revealed on expand */
+.cad {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  opacity: 0; /* JS fades in during expand */
+}
+#scene {
+  display: block;
+  width: min(70vmin, 720px);
+  height: min(70vmin, 720px);
+  filter: drop-shadow(0 24px 40px rgba(0, 0, 0, 0.45));
+}
+
+/* ------------------------------------------------------------
+   Footer
+   ------------------------------------------------------------ */
+.footer {
+  padding: 60px 28px;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  border-top: 1.5px solid var(--ink);
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* ------------------------------------------------------------
+   Reduced motion
+   ------------------------------------------------------------ */
+@media (prefers-reduced-motion: reduce) {
+  .hero__eyebrow,
+  .hero__sub,
+  .hero__tag,
+  .hero__rule,
+  .scrollcue,
+  .hero__title .ltr {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  .scrollcue .bar {
+    animation: none;
+  }
+}
